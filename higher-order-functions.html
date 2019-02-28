@@ -1,0 +1,742 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="Erlang, 高阶函数,函数,匿名,闭包,作用域,过滤器,OOP,面向对象,隐藏章节,秘密,
+		function, higher order, anonymous, closure, funs, map, fold, filter, scope" />
+		<meta name="description" content="Higher order functions: how to pass functions as parameters to other functions, declare anonymous functions (funs), understanding scopes and the concept of closures." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Higher Order Functions | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>高阶函数</h2>
+<h3><a class="section" name="get-functional">让我们函数化</a></h3>
+
+<img class="left" src="static/img/lambda.png" width="128" height="172" alt="A lambda symbol with a sexy mustache" title="lambdude!" />
+
+<p>
+    把你自定义的函数作为参数传递给另一个函数的能力，
+    是所有的函数式编程语言的一个重要组成部分。
+    也就是说，作为参数的函数和其它的参数是一样的。
+    一个函数可以通过<em>高阶函数</em>这个方式将另一个函数作为参数。
+    高阶函数对熟悉Erlang的人来说是非常好的用的抽象工具和最好用的工具。
+</p>
+
+<p>
+    再一次，这也是一个植根于数学的概念，主要是 <a class="external" href="http://en.wikipedia.org/wiki/Lambda_calculus" title="Wikipedia to the rescue!">lambda演算</a>。
+    我不会介绍lambda演算非常多的细节，因为很多然需要花费很多时间理解它并且它有点超出本章的范围。
+    尽管如此，我会简单的定义它：一个系统中所有的东西都是函数，即便是数字。
+    因为所有东西都是函数，函数必须接受另一个函数作为参数并且可以用更多函数操作这个参数！
+</p>
+
+<p> 好了，这听起来有点奇怪，所以让我们用一个例子来展示它们：</p>
+
+<pre class="brush:erl">
+-module(hhfuns).
+-compile(export_all).
+
+one() -&gt; 1.
+two() -&gt; 2.
+
+add(X,Y) -&gt; X() + Y().
+</pre>
+
+<p>现在打开Erlang的shell，编译这个模块并进行一些尝试：</p>
+
+<pre class="brush:eshell">
+1&gt; c(hhfuns).
+{ok, hhfuns}
+2&gt; hhfuns:add(one,two).
+** exception error: bad function one
+     in function  hhfuns:add/2
+3&gt; hhfuns:add(1,2).
+** exception error: bad function 1
+     in function  hhfuns:add/2
+4&gt; hhfuns:add(fun hhfuns:one/0, fun hhfuns:two/0).
+3
+</pre>
+
+<p>
+    感到迷惑？并非如此，一旦你知道在第二个命令中这是怎么工作的（难道不是显而易见的吗？），你就不会迷惑。
+    在第二个命令中原子<code>one</code>和<code>two</code>被传入到<code>add/2</code>中，
+    然后在第三个命令中将两个原子当作函数的名字(<code>X() + Y()</code>)。
+    如果不使用参数列表来写函数，那么这些原子将被认为是原子，但是原子不能认为是函数，所以调用会失败。
+    这就是为什么第三个表达式也会失败：因为值1和2也不能被当作函数调用，并且我们只需要函数做参数！
+</p>
+
+<p> 这是一个新的语法，为了让你把模块外的函数传入进去。它是这样写的<code>fun Module:Function/Arity</code>：
+    这个语法告诉VM，使用那个特殊的函数并将它绑定到一个变量上。</p>
+
+<p> 那么我们这样使用函数能获得什么好处呢？
+    让我展示下面的小例子，这也许回让你明白它的好处。
+    我们将向<code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code>文件中
+    添加一些新的函数，这些函数递归整个列表，并将整个列表中的整数加1或减1：</p>
+
+<pre class="brush:erl">
+increment([]) -&gt; [];
+increment([H|T]) -&gt; [H+1|increment(T)].
+
+decrement([]) -&gt; [];
+decrement([H|T]) -&gt; [H-1|decrement(T)].
+</pre>
+
+<p> 我们可以看出这些函数是多么的相似？它们都做了相同的事情：
+    遍历整个列表，在每个元素上执行相同的函数（<code>+</code>或<code>-</code>），然后再次调用自己。
+    代码中基本上没什么变化：只是被执行的函数和递归调用有些不同。但是做为核心的链表上的递归调用都是相同的。
+    我将抽象这些相同的部分到一个函数（<code>map/2</code>）中，它将接受另一个函数作为参数：
+</p>
+
+<pre class="brush:erl">
+map(_, []) -&gt; [];
+map(F, [H|T]) -&gt; [F(H)|map(F,T)].
+
+incr(X) -&gt; X + 1.
+decr(X) -&gt; X - 1.
+</pre>
+
+<p>我们可以在shell中进行一些测试：</p>
+
+<pre class="brush:eshell">
+1&gt; c(hhfuns).
+{ok, hhfuns}
+2&gt; L = [1,2,3,4,5].
+[1,2,3,4,5]
+3&gt; hhfuns:increment(L).
+[2,3,4,5,6]
+4&gt; hhfuns:decrement(L).
+[0,1,2,3,4]
+5&gt; hhfuns:map(fun hhfuns:incr/1, L).
+[2,3,4,5,6]
+6&gt; hhfuns:map(fun hhfuns:decr/1, L).
+[0,1,2,3,4]
+</pre>
+
+<p>
+    我们可以看出结果是相同的，但是我们创建了一个更好的抽象！
+    每次我们想在列表上的每个元素上执行一个函数的时候，我们只需要调用 <code>map/2</code>，并将要执行的函数作为参数传入。
+    但是，有一点烦人的地方，我们每次都需要将放在<code>map/2</code>中作为参数的函数放到一个模块中，对它进行命名和导出，
+    最后还要编译等。这显然不现实，我们需要动态的声明这些函数。。。</p>
+
+
+<h3><a class="section" name="anonymous-functions">匿名函数</a></h3>
+
+<p>
+    匿名函数，或<em>funs</em>，是用来解决让我们声明特殊的内连函数而不想去命名这个函数的这个问题。
+    它们可以完成很多普通函数能完成的事情，但是它们不能递归调用自己（因为为没有名字，它们怎么知道怎么调用自己呢？）
+    它们的语法如下：</p>
+
+<pre class="brush:erl">
+fun(Args1) -&gt;
+    Expression1, Exp2, ..., ExpN;
+   (Args2) -&gt;
+    Expression1, Exp2, ..., ExpN;
+   (Args3) -&gt;
+    Expression1, Exp2, ..., ExpN
+end
+</pre>
+
+<p>并且我们像下面的例子使用：</p>
+
+<pre class="brush:eshell">
+7&gt; Fn = fun() -&gt; a end.
+#Fun&lt;erl_eval.20.67289768&gt;
+8&gt; Fn().
+a
+9&gt; hhfuns:map(fun(X) -&gt; X + 1 end, L).
+[2,3,4,5,6]
+10&gt; hhfuns:map(fun(X) -&gt; X - 1 end, L).
+[0,1,2,3,4]
+</pre>
+
+<p>
+    并且，现在你看到了一个让所有人都喜欢函数式编程的原因：
+    抽象所有低级别的代码的能力。基本的概念，如循环都可以被忽略，让你专注于你所要做的事情，而不是你要怎么做它。
+</p>
+
+<p>
+    匿名函数已经可以非常完美的完成这样的抽象了，但是它们还有很多隐藏的能力等待我们发掘：
+</p>
+
+<pre class="brush:eshell">
+11&gt; PrepareAlarm = fun(Room) -&gt;
+11&gt;                      io:format("Alarm set in ~s.~n",[Room]),
+11&gt;                      fun() -&gt; io:format("Alarm tripped in ~s! Call Batman!~n",[Room]) end
+11&gt;                   end.
+#Fun&lt;erl_eval.20.67289768&gt;
+12&gt; AlarmReady = PrepareAlarm("bathroom").
+Alarm set in bathroom.
+#Fun&lt;erl_eval.6.13229925&gt;
+13&gt; AlarmReady().
+Alarm tripped in bathroom! Call Batman!
+ok
+</pre>
+
+
+<p>
+    请接电话蝙蝠侠！这里发生了什么？首先，我们先声明了一个匿名函数，并将它赋值给<var>PrepareAlarm</var>。
+    但是这个函数还没有触发：只有在执行<code>PrepareAlarm("bathroom").</code>的时候，它才被真正的调用了。
+    <img class="left" src="static/img/batman.png" width="137" height="224" alt="Batman with a manly mustache" title="le batman" />
+    此时，它会调用<code>io:format/2</code>来输出"Alarm set"。
+    并且使用第二个表达式（另一个匿名函数）作为返回值，返回给调用者，调用者将这个匿名函数赋值给<var>AlarmReady</var>。
+    不过请注意，在这个函数中，变量<var>Room</var>的值是从它的‘父’函数(<var>PrepareAlarm</var>)进行绑定。
+    和这个相关的概念叫做<em>闭包</em>。</p>
+
+<p>
+    为了理解闭包，首先就需要理解作用域。
+    函数作用域可以被想象为一个存放所有变量和它们值的地方。
+    在函数<code>base(A) -&gt; B = A + 1.</code>中<var>A</var>和<var>B</var>
+    都是被定义在<code>base/1</code>的作用域中。这代表着在<code>base/1</code>函数中任何东西都可以引用
+    <var>A</var>和<var>B</var>并且得到相应值。并且当我说‘任何地方’，我并不是在开玩笑，亲；这同样包含匿名函数：
+</p>
+
+<pre class="brush:erl">
+base(A) -&gt;
+    B = A + 1,
+    F = fun() -&gt; A * B end,
+    F().
+</pre>
+
+<p><var>B</var>和<var>A</var>始终被绑定在<code>base/1</code>函数作用域中，
+    所以函数<var>F</var>能访问它们。这是因为函数<var>F</var>继承了<code>base/1</code>的作用域。
+    像所有真是世界中的继承一样，父函数无法使用子函数作用域内的变量：</p>
+
+<pre class="brush:erl">
+base(A) -&gt;
+    B = A + 1,
+    F = fun() -&gt; C = A * B end,
+    F(),
+    C.
+</pre>
+
+<p> 在这个版本的函数中，<var>B</var>还是等于<code>A + 1</code>并且<var>F</var>还是能执行的非常好。
+    但是，变量<var>C</var>只包含在匿名函数<var>F</var>的作用域当中。
+    当函数<code>base/1</code>在最后一行，想去访问<var>C</var>的值的时候，它只能得到一个非绑定的变量。
+    事实上，当你编译这个函数的时候，编译器就会丢出一个异常给你。所以继承是单向的。
+</p>
+
+<p>
+    这个是非常重要的，我们需要记住匿名函数继承的作用域，不管这个匿名函数是在内部使用，还是把它传入到另一个函数中：
+</p>
+
+<pre class="brush:erl">
+a() -&gt;
+    Secret = "pony",
+    fun() -&gt; Secret end.
+
+b(F) -&gt;
+    "a/0's password is "++F().
+</pre>
+
+<p>好了，当我们编译它们的时候：</p>
+
+<pre class="brush:eshell">
+14&gt; c(hhfuns).
+{ok, hhfuns}
+15&gt; hhfuns:b(hhfuns:a()).
+"a/0's password is pony"
+</pre>
+
+<p>
+    是谁泄漏了<code>a/0</code>中的密码呢？当然是<code>a/0</code>自己。
+    因为匿名函数在<code>a/0</code>中被声明，所以匿名函数可以访问<code>a/0</code>的作用域，
+    所以它在<code>b/1</code>中实行的时候，就像前面所有的那样，匿名函数依然可以访问的到<code>a/0</code>中的变量。
+    这是非常有用的，它可以让我们将变量和内容带离原来的上下文，此后就不再需要上下文本身了（这个我们先前的蝙蝠侠的例子一样）。
+</p>
+
+<p>
+    当你有一个函数需要很多参数，但是其中有一个是常量，
+    你也许喜欢使用匿名函数来携带这些变量以及上下文：
+</p>
+
+<pre class="brush:eshell">
+16&gt; math:pow(5,2).
+25.0
+17&gt; Base = 2.
+2
+18&gt; PowerOfTwo = fun(X) -&gt; math:pow(Base,X) end.
+#Fun&lt;erl_eval.6.13229925&gt;
+17&gt; hhfuns:map(PowerOfTwo, [1,2,3,4]).
+[2.0,4.0,8.0,16.0]
+</pre>
+
+<p> 通过将调用<code>math:pow/2</code>函数和变量<var>Base</var>绑定且封装在一个匿名函数中，
+    我们将<var>PowerOfTwo</var>传入<code>hhfuns:map/2</code>进行多次的固定指数的函数调用变成了可能。
+</p>
+
+<p>
+    有些秘密被隐藏起来了，只有那些阅读了本指南的html文件的人才会发现！（原作者在html中隐藏了一段，我将它一同翻译出来。）
+</p>
+<p>
+    事实上，独自使用［闭包］原则就足可以让你实现基本的类和实现简单的面向对象及继承方式的编程。
+    让我使用<a class="source" href="http://learnyousomeerlang.com/static/erlang/oop.erl" title="final implementation">oop.erl</a>
+    模块，并且重用下‘狗是一个动物的’例子：
+</p>
+
+<pre class="brush:erl">
+-module(oop).
+-export([animal/1, dog/1, cat/1]).
+
+%% all the method calls need to be in tuples when they have more than
+%% one argument so we can use functions of arity 1 for every call we make.
+
+animal(Name) -&gt;
+    fun(type) -&gt; "living thing";
+       (name) -&gt; Name;
+       (move) -&gt; Name++" moves around...";
+       ({eat, Item}) -&gt; Name++" eats "++Item;
+       (_) -&gt; "I'm sorry Dave, I can't do that."
+    end.
+
+dog(Name) -&gt;
+    Parent = animal(Name),
+    fun(talk) -&gt; Name++" says: Woof!";
+       ({chase, Animal}) when is_function(Animal) -&gt;
+            Name++" chases a "++Animal(type)++" named "++Animal(name)++" around";
+       (X) -&gt; Parent(X)
+    end.
+
+cat(Name) -&gt;
+    Parent = animal(Name),
+    fun(type) -&gt; "cat";
+       (talk) -&gt; Name++" says: Meow!";
+       (X) -&gt; Parent(X)
+    end.
+</pre>
+
+<p>并且我们这样使用它：</p>
+
+<pre class="brush:eshell">
+16&gt; c(oop).
+{ok, oop}
+17&gt; Bird = oop:animal("Bird").
+#Fun&lt;oop.0.88943279&gt;
+18&gt; Bird(type).
+"living thing"
+19&gt; Bird({eat, worm}).
+"Bird eats worm"
+20&gt; Dog = oop:dog("Raptor-Dog").
+#Fun&lt;oop.1.133772145&gt;
+21&gt; Dog(talk).
+"Raptor-Dog says: Woof!"
+22&gt; Dog(name).
+"Raptor-Dog"
+23&gt; Cat = oop:cat("Sgt. McMittens").
+#Fun&lt;oop.2.66956814&gt;
+24&gt; Cat(type).
+"cat"
+25&gt; Dog({chase, Cat}).
+"Raptor-Dog chases a cat named Sgt. McMittens around"
+26&gt; Cat({play, "yarn"}).
+"I'm sorry Dave, I can't do that."
+</pre>
+
+<img class="right" src="http://learnyousomeerlang.com/static/img/raptor-dog.png" width="240" height="191" alt="A dog and a raptor: raptor-dog, the best kind of dog." />
+
+<p>
+    好了，当我们和真正的OOP类型的语言相比，这不会让我们感到印象深刻，但是我们依然完成了类继承、
+    方法重载和构建函数（虽然看起来有点奇怪）。
+    当然，我们从这里学到的最重要的一课是，闭包可以将上下文从一个函数传递到另一个函数中。
+    <strong>注意了，你<em>不应当</em>这样编写任何Erlang的代码，因为没人愿意这么做。</strong>
+    这里面仅仅是一个例子，用来展示闭包的能力，不要太当真。如果你很想在Erts平台上使用OOP那么请使用Elixir，
+    Elixir是一个Erts平台上和Ruby／Scala语法非常类似的语言。
+</p>
+
+<!--Secret for you crazy people who read the html comments! Just copy/paste this or something!-->
+<!-- 
+<p>In fact, this [closure] principle alone is enough to let you implement basic classes and simple object-oriented programming. Take this <a class="source" href="http://learnyousomeerlang.com/static/erlang/oop.erl" title="final implementation">oop.erl</a> module as an overused 'dog is an animal' example:</p>
+
+<pre class="brush:erl">
+-module(oop).
+-export([animal/1, dog/1, cat/1]).
+
+%% all the method calls need to be in tuples when they have more than
+%% one argument so we can use functions of arity 1 for every call we make.
+
+animal(Name) -&gt;
+    fun(type) -&gt; "living thing";
+       (name) -&gt; Name;
+       (move) -&gt; Name++" moves around...";
+       ({eat, Item}) -&gt; Name++" eats "++Item;
+       (_) -&gt; "I'm sorry Dave, I can't do that."
+    end.
+
+dog(Name) -&gt;
+    Parent = animal(Name),
+    fun(talk) -&gt; Name++" says: Woof!";
+       ({chase, Animal}) when is_function(Animal) -&gt;
+            Name++" chases a "++Animal(type)++" named "++Animal(name)++" around";
+       (X) -&gt; Parent(X)
+    end.
+
+cat(Name) -&gt;
+    Parent = animal(Name),
+    fun(type) -&gt; "cat";
+       (talk) -&gt; Name++" says: Meow!";
+       (X) -&gt; Parent(X)
+    end.
+</pre>
+
+<p>And to use it:</p>
+
+<pre class="brush:eshell">
+16&gt; c(oop).
+{ok, oop}
+17&gt; Bird = oop:animal("Bird").
+#Fun&lt;oop.0.88943279&gt;
+18&gt; Bird(type).
+"living thing"
+19&gt; Bird({eat, worm}).
+"Bird eats worm"
+20&gt; Dog = oop:dog("Raptor-Dog").
+#Fun&lt;oop.1.133772145&gt;
+21&gt; Dog(talk).
+"Raptor-Dog says: Woof!"
+22&gt; Dog(name).
+"Raptor-Dog"
+23&gt; Cat = oop:cat("Sgt. McMittens").
+#Fun&lt;oop.2.66956814&gt;
+24&gt; Cat(type).
+"cat"
+25&gt; Dog({chase, Cat}).
+"Raptor-Dog chases a cat named Sgt. McMittens around"
+26&gt; Cat({play, "yarn"}).
+"I'm sorry Dave, I can't do that."
+</pre>
+
+<img class="right" src="http://learnyousomeerlang.com/static/img/raptor-dog.png" width="240" height="191" alt="A dog and a raptor: raptor-dog, the best kind of dog." />
+
+<p>Alright, this is not very impressive when we compare it to real OOP languages, but we still managed to cover concepts such as class inheritance, method overriding and constructors (albeit in a terribly basic manner). The important lesson here is that closures can be used to carry state around from function to function. <strong>Note that you should <em>not</em> write new Erlang programs based on that OOP example; nobody does that.</strong> It's an example and nothing more.</p> -->
+
+<p> 当你编写匿名函数的时候，这里还剩一个你也许会陷入的陷阱，就是你重新定义了作用域：</p>
+
+<pre class="brush:erl">
+base() -&gt;
+    A = 1,
+    (fun() -&gt; A = 2 end)().
+</pre>
+
+<p>
+    这将声明一个匿名函数并执行它。
+    因为匿名函数继承了<code>base/0</code>的作用域，
+    当我们使用<code>=</code>操作符号去比较变量<var>A</var>（绑定到1上）和2的时候，这一定会失败。
+    然后，这里面可以重新定义变量的，如果我们在内嵌函数头中声明相同的变量，我们就可以重新定义它：
+</p>
+
+<pre class="brush:erl">
+base() -&gt;
+    A = 1,
+    (fun(A) -&gt; A = 2 end)(2).
+</pre>
+
+<p> 你看到它可以正常的工作。如果你尝试编译这段代码，你会等到一个关于<em>覆盖</em>的警告(<em>"Warning: variable 'A' shadowed in 'fun'"</em>)。
+    覆盖是一个用来描述一个重定义了一个和父作用域同名的新变量。
+    这个提示就是为了防止出现一些错误（通常是正确的行为），但是你会依然希望编译器提示你覆盖了一个变量这种情况。
+</p>
+
+<div class="note update">
+    <p><strong>更新：</strong><br />
+        从R17这个版本开始，Erlang开始支持匿名函数的命名。
+        是的，就是你所想的<em>命名的匿名函数</em>。（译者在这里想说，闭包本身就不一定是匿名的，
+        Erlang在此处完善了自身的闭包实现，这样就可以解决匿名函数无法进行尾递归的问题。）
+    </p>
+    <p> 这个技巧是这样的，名字只能在匿名函数的作用域内使用，不能在匿名函数的作用域外使用。
+        这样做带来的好处就是，我们可以定义匿名的递归函数。
+        例如，我们可以定一个匿名函数，一直呼叫蝙蝠侠：</p>
+
+    <pre class="brush:eshell">
+18&gt; f(PrepareAlarm), f(AlarmReady).
+ok
+19&gt; PrepareAlarm = fun(Room) -&gt;
+19&gt;     io:format("Alarm set in ~s.~n",[Room]),
+19&gt;     fun Loop() -&gt;
+19&gt;         io:format("Alarm tripped in ~s! Call Batman!~n",[Room]),
+19&gt;         timer:sleep(500),
+19&gt;         Loop()
+19&gt;     end
+19&gt; end.
+#Fun&lt;erl_eval.6.71889879&gt;
+20&gt; AlarmReady = PrepareAlarm("bathroom").
+Alarm set in bathroom.
+#Fun&lt;erl_eval.44.71889879&gt;
+21&gt; AlarmReady().
+Alarm tripped in bathroom! Call Batman!
+Alarm tripped in bathroom! Call Batman!
+Alarm tripped in bathroom! Call Batman!
+...
+</pre>
+
+<p> 变量<var>Loop</var>指向匿名函数自身并且在匿名函数作用域内有效，这个和我们使用相似的变量指向这个匿名函数的时候的效果是一样的。
+    这将会使我们在Shell中的操作不那么痛苦了。</p>
+</div>
+
+<p>
+    就像我之前那章结尾保证的一样，我们了解了很多关于匿名函数的理论，
+    并且探索了更多常见的抽象概念，从而让我们避免编写很多递归函数。
+</p>
+
+
+<img class="right" src="static/img/erland.png" width="267" height="238" alt="A map of Erland, the mystic Erlang island!" />
+
+<h3><a class="section" name="maps-filters-folds">Maps，filters，folds和其它</a></h3>
+<br>
+<p>
+    在本章开始的时候，
+    我简单的展示了如何使用抽象的方式创建了两个和<code>map/2</code>相似的函数。
+    我也非常肯定的说这类函数可以用在我们想对每个元素进行操作的任意列表上。
+    我们可以这样定义这种函数：
+</p>
+<br>
+<br>
+<pre class="brush:erl">
+map(_, []) -&gt; [];
+map(F, [H|T]) -&gt; [F(H)|map(F,T)].
+</pre>
+
+<p>
+    然而，这里有非常多的类似的抽象函数去替代常见的递归函数。
+    让我们先来看看下面这个两个函数吧：
+</p>
+
+<pre class="brush:erl">
+%% only keep even numbers
+even(L) -&gt; lists:reverse(even(L,[])).
+
+even([], Acc) -&gt; Acc;
+even([H|T], Acc) when H rem 2 == 0 -&gt;
+    even(T, [H|Acc]);
+even([_|T], Acc) -&gt;
+    even(T, Acc).
+
+%% only keep men older than 60
+old_men(L) -&gt; lists:reverse(old_men(L,[])).
+
+old_men([], Acc) -&gt; Acc;
+old_men([Person = {male, Age}|People], Acc) when Age &gt; 60 -&gt;
+    old_men(People, [Person|Acc]);
+old_men([_|People], Acc) -&gt;
+    old_men(People, Acc).
+</pre>
+
+<p> 第一个函数接受一个整数列表，并且只返回那些是奇数的。
+    第二个函数接受一个元素为<code>{Gender, Age}</code>类型的人员列表，
+    并且只返回那些超过60岁的男性的元素。
+    这里我们很难找到任何相似之处，但是我们依然可以找到一些相同的点。
+    两个函数都操作一个列表，并且以保留通过测试（一种<em>断言</em>）的元素并剔除其它元素为目标。
+    通过这两个概括，我们可以得到抽象这种行为的所有信息：
+</p>
+
+<pre class="brush:erl">
+filter(Pred, L) -&gt; lists:reverse(filter(Pred, L,[])).
+
+filter(_, [], Acc) -&gt; Acc;
+filter(Pred, [H|T], Acc) -&gt;
+    case Pred(H) of
+        true  -&gt; filter(Pred, T, [H|Acc]);
+        false -&gt; filter(Pred, T, Acc)
+    end.
+</pre>
+
+<p>
+    为了使用过滤函数，我们只能在将函数保存到文件中，在函数以为进行测试。
+    编译 <code><a class="source" href="static/erlang/hhfuns.erl" title="final implementation">hhfuns</a></code>
+    模块并尝试执行它：
+</p>
+
+<pre class="brush:eshell">
+1&gt; c(hhfuns).
+{ok, hhfuns}
+2&gt; Numbers = lists:seq(1,10).
+[1,2,3,4,5,6,7,8,9,10]
+3&gt; hhfuns:filter(fun(X) -&gt; X rem 2 == 0 end, Numbers).
+[2,4,6,8,10]
+4&gt; People = [{male,45},{female,67},{male,66},{female,12},{unknown,174},{male,74}].
+[{male,45},{female,67},{male,66},{female,12},{unknown,174},{male,74}]
+5&gt; hhfuns:filter(fun({Gender,Age}) -&gt; Gender == male andalso Age &gt; 60 end, People).
+[{male,66},{male,74}]
+</pre>
+
+<p>
+    这两个例子展示了如何使用<code>filter/2</code>函数，
+    程序员们只需要关注想要的结果，如何编写断言和使用哪个列表。
+    整个循环操作丢弃我们所不需要的项，我们就不需要再关心了。
+    其中关于抽象函数最重要的一条：
+    尝试让程序员远离那些一成不变的重复，让程序员更专注那些需要改变的部分。
+</p>
+
+<p>
+    在前面的章节中，我们介绍了另一中递归操作，我们逐一遍历列表中的每一个元素，并将它们汇总成一个结果。
+    这个我们称为<em>fold</em>，我们可以将这个函数用在下面这些函数上：
+</p>
+
+<pre class="brush:erl">
+%% find the maximum of a list
+max([H|T]) -&gt; max2(T, H).
+
+max2([], Max) -&gt; Max;
+max2([H|T], Max) when H &gt; Max -&gt; max2(T, H);
+max2([_|T], Max) -&gt; max2(T, Max).
+
+%% find the minimum of a list
+min([H|T]) -&gt; min2(T,H).
+
+min2([], Min) -&gt; Min;
+min2([H|T], Min) when H &lt; Min -&gt; min2(T,H);
+min2([_|T], Min) -&gt; min2(T, Min).
+
+%% sum of all the elements of a list
+sum(L) -&gt; sum(L,0).
+
+sum([], Sum) -&gt; Sum;
+sum([H|T], Sum) -&gt; sum(T, H+Sum).
+</pre>
+
+<img class="right" src="static/img/foldr.png" width="172" height="248" alt="A playing card with 'Joker' replaced by 'Foldr'. The joker has huge glasses, a hook and hairy legs" title="Terrrrrible puns, ladies and gentlemen!" />
+
+<p>
+    为了发现fold该如何进行抽象，
+    我们需要找出这些函数的所有共同点，然后再找出它们的不同点。
+    就像我们前面所提到的，这些函数都是将一个列表转化为一个单值。
+    显然，我们的fold应当考虑迭代的同时，还要考虑保存单值，但是我们并不需要重新构建一个列表。
+    接着我们需要忽略哨位，因为并不是所有函数都会有：
+    因为这些都需要放到程序员所定义的函数中。从这个角度来看，我们的fold函数和sum函数是非常像的。
+
+</p>
+
+<p>
+    这三个函数都有一个微妙的元素，虽然我们没有提及，但是每一个函数都需要有一个初始值才能进行计算。
+    在<code>sum/2</code>这个例子中，我们使用0作为初始值，这样我们就可以进行<code>X = X + 0</code>计算，
+    由于0是一个中性值，因此用0作为初始值我们就不会搞乱我们的计算过程。
+    如果我们进行乘法操作，我们需要使用1作为初始值进行<code>X = X * 1</code>计算。
+    然而函数<code>min/1</code>和<code>max/1</code>却不能使用任何初始值：
+    如果一个列表只有负数，我们使用0作为初始值，那么返回的结果将是错误的。
+    因此，我们需要使用列表的第一个元组作为初始值。
+    很可惜的是，我们不能总是这样作出决策，所以我们将这个决策权交给了程序员。
+    通过这些讨论，我们可以构建这样的抽象：
+</p>
+
+<pre class="brush:erl">
+fold(_, Start, []) -&gt; Start;
+fold(F, Start, [H|T]) -&gt; fold(F, F(H,Start), T).
+</pre>
+
+<p>接着我们要做一些尝试：</p>
+
+<pre class="brush:eshell">
+6&gt; c(hhfuns).
+{ok, hhfuns}
+7&gt; [H|T] = [1,7,3,5,9,0,2,3].    
+[1,7,3,5,9,0,2,3]
+8&gt; hhfuns:fold(fun(A,B) when A &gt; B -&gt; A; (_,B) -&gt; B end, H, T).
+9
+9&gt; hhfuns:fold(fun(A,B) when A &lt; B -&gt; A; (_,B) -&gt; B end, H, T).
+0
+10&gt; hhfuns:fold(fun(A,B) -&gt; A + B end, 0, lists:seq(1,6)).
+21
+</pre>
+
+<p> 不错吧，任何想将列表归并成1个元素的函数，都可以使用fold函数。</p>
+
+<p>
+    非常好，此刻我们可以将累加器作为一个单独的元素（或者单独的值），同时累加器也可以是一个列表。
+    因此，我们可以fold去构建一个列表。
+    从中我们看到fold是一个非常全面的函数，你可以使用fold来实现其它的在列表上使用的递归函数，其中包括map和filer：
+</p>
+
+<pre class="brush:erl">
+reverse(L) -&gt;
+    fold(fun(X,Acc) -&gt; [X|Acc] end, [], L).
+
+map2(F,L) -&gt;
+    reverse(fold(fun(X,Acc) -&gt; [F(X)|Acc] end, [], L)).
+
+filter2(Pred, L) -&gt;
+    F = fun(X,Acc) -&gt;
+            case Pred(X) of
+                true  -&gt; [X|Acc];
+                false -&gt; Acc
+            end
+        end,
+    reverse(fold(F, [], L)).
+</pre>
+
+<p>
+    好了，这些函数都像我们手写的函数一样得到正确的结果。足可见抽象的强大。
+</p>
+
+<p>
+    Map，filter和fold只是Erlang标准库lists操作抽象的一部分
+    (可以查看<code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#map/2" title="unofficial, but cleaner doc">lists:map/2</a></code>,
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#filter/2" title="unofficial, but cleaner doc">lists:filter/2</a></code>,
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#foldl/3" title="unofficial, but cleaner doc">lists:foldl/3</a></code>
+    和<code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#foldr/3" title="unofficial, but cleaner doc">lists:foldr/3</a></code>）。
+
+    其它函数包括 <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#all/2" title="unofficial, but cleaner doc">all/2</a>
+    </code> 和
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#any/2" title="unofficial, but cleaner doc">any/2</a></code>
+    这两个函数分别接受一个断言，并且测试是否所有的元素都符合断言的条件或者其中至少一个元素符合断言的条件。
+    还有<code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#dropwhile/2" title="unofficial, but cleaner doc">dropwhile/2</a></code>
+    函数，它将忽略列表中的元素，直到它找到一个符合断言条件的元素，和它相反的是
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#takewhile/2" title="same doc, still cleaner!">takewhile/2</a></code>函数，
+    它将保留所有的元素直到找到一个符合断言条件的元素。同时跟随前两个函数附赠了一个<code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#partition/2" title="not worth adding more of these">partition/2</a></code>函数，
+    该函数将返回两个部分：一部分是符合断言条件的元素，另一部分是不符合断言的元素。另一些在列表上常用的函数包括
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatten/1" title="here it goes again">flatten/1</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatlength/1" title="more function description">flatlength/1</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#flatmap/2" title="flatten &lt;3 map">flatmap/2</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#merge/1" title="Gotta merge em' all, pokelists!">merge/1</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#nth/2" title="woop de bop, still the same as other doc links in this paragraph">nth/2</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#nthtail/2" title="it's nth/2 but not really">nthtail/2</a></code>，
+    <code><a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html#split/2" title="thank the lord it's over!">split/2</a></code>和其它的函数。
+</p>
+
+<p>
+    你还会碰到其它类似zippers，unzippers，maps和folds的组合等。
+    我强烈建议你去阅读下 <a class="docs" href="http://erldocs.com/17.3/stdlib/lists.html">documentation on lists</a>这个文档，从而直到我们都能做什么。
+    你会发现，你自己很少需要去写递归函数，因为你可以使用这些非常好的抽象函数。</p>
+
+				<ul class="navigation">
+											<li><a href="recursion.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="errors-and-exceptions.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>

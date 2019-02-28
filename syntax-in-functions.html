@@ -1,0 +1,595 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="Content-Style-Type" content="text/css" />
+		<meta name="keywords" content="函数,模式匹配,哨位,定义,模块,语法,
+		Erlang, functions, pattern matching, if else, case of, guards, definition, module, syntax, code" />
+		<meta name="description" content="Erlang functions: their syntax, pattern matching with multiple heads, clauses and guards. Also visits the 'if' and 'case ... of' conditional expressions." />
+        <meta name="google-site-verification" content="mi1UCmFD_2pMLt2jsYHzi_0b6Go9xja8TGllOSoQPVU" />
+		<link rel="stylesheet" type="text/css" href="static/css/screen.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shCore.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/sh/shThemeLYSE2.css" media="screen" />
+		<link rel="stylesheet" type="text/css" href="static/css/print.css" media="print" />
+		<link href="rss" type="application/rss+xml" rel="alternate" title="LYSE news" />
+		<link rel="icon" type="image/png" href="favicon.ico" />
+		<link rel="apple-touch-icon" href="static/img/touch-icon-iphone.png" />
+		<link rel="apple-touch-icon" sizes="72x72" href="static/img/touch-icon-ipad.png" />
+		<link rel="apple-touch-icon" sizes="114x114" href="static/img/touch-icon-iphone4.png" />
+		<title>Syntax in functions | Learn You Some Erlang for Great Good!</title>
+	</head>
+	<body>
+		<div id="wrapper">
+			<div id="header">
+				<h1>Learn you some Erlang</h1>
+				<span>for great good!</span>
+			</div> <!-- header -->
+			<div id="menu">
+				<ul>
+					<li><a href="content.html" title="Home">Home</a></li>
+					<li><a href="faq.html" title="Frequently Asked Questions">FAQ</a></li>
+					<li><a href="rss" title="Latest News">RSS</a></li>
+					<li><a href="static/erlang/learn-you-some-erlang.zip" title="Source Code">Code</a></li>
+				</ul>
+			</div><!-- menu -->
+			<div id="content">
+            <div class="noscript"><noscript>Hey there, it appears your Javascript is disabled. That's fine, the site works without it. However, you might prefer reading it with syntax highlighting, which requires Javascript!</noscript></div>
+<h2>函数中的语法</h2>
+
+<h3><a class="section" name="pattern-matching">模式匹配</a></h3>
+
+<img class="right" src="static/img/snail.png" width="222" height="84" alt="A snail greeting you." title="The following code doesn't care about snails :(" />
+
+<p>
+    我们现在有能力存储和编译我们的代码了，我们可以开始写更多功能的函数了。
+    到目前为止，我们已经写了一些简单但令人印象深刻的函数。下面我们将写一些更加有趣的东西。
+    我们第一个函数将是根据性别不同来到招呼的函数。
+    在绝大部分语言中，你会像下面这样写：</p>
+
+<pre class="brush:erl">
+function greet(Gender,Name)
+    if Gender == male then
+        print("Hello, Mr. %s!", Name)
+    else if Gender == female then
+        print("Hello, Mrs. %s!", Name)
+    else
+        print("Hello, %s!", Name)
+end
+</pre>
+
+<p>使用模式匹配，Erlang为你节省了大量的重复代码。同样的函数在Erlang中看起来是这样的：</p>
+
+<pre class="brush:erl">
+greet(male, Name) -&gt;
+    io:format("Hello, Mr. ~s!", [Name]);
+greet(female, Name) -&gt;
+    io:format("Hello, Mrs. ~s!", [Name]);
+greet(_, Name) -&gt;
+    io:format("Hello, ~s!", [Name]).
+</pre>
+
+<p>
+    我承认，和其它语言相比Erlang的输出函数是多么的丑陋，但是这一点都不重要。
+    主要的不同是，我们用模式匹配同时定义了该使用哪个函数和哪个值被绑定。
+    其实我们没有必要先绑定的值，然后比较它们！所以我们不这么做：</p>
+
+<pre class="brush:erl">
+function(Args)
+   if X then
+      Expression
+   else if Y then
+      Expression
+   else
+      Expression
+</pre>
+
+<p>我们这样写：</p>
+
+<pre class="brush:erl">
+function(X) -&gt;
+  Expression;
+function(Y) -&gt;
+  Expression;
+function(_) -&gt;
+  Expression.
+</pre>
+
+<p>我们得到了同样的结果，但是这样更具有声明式的风格。(in order to get similar results, but in a much more declarative style.)
+    所有<code>function</code>声名中的每一个都被成为<em>函数分句</em>。
+    函数分句必须用分号（<code>;</code>）分开，当这些分句放在一起就是<em>函数声明</em>。
+    一个函数声明被认为是一个更大语句，并且函数声明中最后一个函数分句需要用句号结尾。
+    用符号决定工作流这很“有趣”，但是你很快就会适应这件事情。
+    (It's a "funny" use of tokens to determine workflow, but you'll get used to it.)
+    只要你希望如此，因为没有其它的方式了！
+</p>
+
+<div class="note">
+	<p><strong>注意：</strong>
+        <code>io:format</code>是通过字符串中可替换的符号的帮助来完成字符串输出格式化。
+        用来代表可替换符号字符是波浪号（<code>~</code>）。
+        一些替换符号是内置的如换行符号<code>~n</code>。
+        绝大部分其它替换符号代表格式化数据的方式。
+        当函数调用<code>io:format("~s!~n",["Hello"]).</code>时，其中包含了一个接受字符串或比特字符串的<code>~s</code>替换符
+        和<code>~n</code>替换符，这个最终输出是<code>"Hello!\n"</code>。
+        另一个比较常用的替换符是<code>~p</code>，它可以非常好的输出Erlang的任何数据类型（为其添加适当的缩进等）。</p>
+	<p>我们将在稍后关于输入／输出相关的章节深入介绍<code>io:format</code>，
+        但是当下你可以尝试下这些，看它们会输出什么：
+        <code>io:format("~s~n",[&lt;&lt;"Hello"&gt;&gt;])</code>，
+        <code>io:format("~p~n",[&lt;&lt;"Hello"&gt;&gt;])</code>，<code>io:format("~~~n")</code>，
+        <code>io:format("~f~n", [4.0])</code>, <code>io:format("~30f~n", [4.0])</code>。
+        这个和很多其它的语言中<code>printf</code>非常像。
+        如果你没耐心等到介绍I/O的章节，那么阅读下<a class="docs" href="http://erlang.org/doc/man/io.html#format-3" title="straight from the horse's mouth">在线文档</a>去了解更多。</p>
+</div>
+
+
+<p>
+    在函数中模式匹配可以比上面的例子更复杂更强大。
+    或许你还记得前面章节中，我们使用模式匹配获得列表头和尾。
+    让我们立刻就做！建立一个新的模块叫<code><a class="source" href="static/erlang/functions.erl" title="complete module!">functions</a></code>，
+    其中我们将写很多函数来探索模式匹配能给我们带来什么：</p>
+
+<pre class="brush:erl">
+-module(functions).
+-compile(export_all). %% replace with -export() later, for God's sake!
+</pre>
+
+<p>
+    第一个函数我们将编写<code>head/1</code>，它将像<code>erlang:hd/1</code>一样接收一个列表作为参数并返回列表的第一个元素。
+    我将使用链接操作符（<code>|</code>）帮助我完成这件事：
+</p>
+
+<pre class="brush:erl">
+head([H|_]) -&gt; H.
+</pre>
+
+<p>如果你在shell中输入<code>functions:head([1,2,3,4]).</code>（模块要编译成功），
+    一可以看到值‘1’被返回。所以你想得到列表的第二个元素你可以创建这样一个函数：</p>
+
+<pre class="brush:erl">
+second([_,X|_]) -&gt; X.
+</pre>
+
+<p>
+    Erlang为了能进行模式匹配，列表将被解构。在shell中尝试下吧！
+</p>
+
+<pre class="brush:eshell">
+1&gt; c(functions).
+{ok, functions}
+2&gt; functions:head([1,2,3,4]).
+1
+3&gt; functions:second([1,2,3,4]).
+2
+</pre>
+
+<p>
+    只要你想，你可以为列表重复任意长次数，虽然这不是很实际但是可以达到数千个值。
+    (This could be repeated for lists as long as you want, although it would be impractical to do it up to thousands of values.)
+    这个可以通过使用稍后介绍的递归函数变得更好。目前，还是更多关注模式匹配。
+    关于自由变量和绑定变量，我们在<a class="chapter local" href="starting-out-for-real.html#invariable-variables" title="Invariable Variables">真正的开始中</a>讨论过，并且在函数中表现也是不变的：
+    然后我们可以比较并且知道如果两个传入函数的参数是相同还是不同。
+    对于这一点，我们创建了<code>same/2</code>函数，它接收两个参数并判断它们是否相同：
+ </p>
+
+<pre class="brush:erl">
+same(X,X) -&gt;
+    true;
+same(_,_) -&gt;
+    false.
+</pre>
+<p>
+    并且这十分简单。再解释这个函数是如何工作之前，我们将再次讨论一下绑定变量和非绑定变量的概念：
+</p>
+
+<img class="explanation" src="static/img/musical-chair.png" width="357" height="281" alt="A game of musical chair with 3 chairs: two occupied by a cat and a snake, and one free. The cat and snake are labelled 'values', the chairs on which they sit are labelled 'bound', and the free chair is labelled 'unbound'" />
+
+<p>
+    如果Erlang是一个抢椅子的游戏，你会想坐到空椅子上。如果坐在任何一个已经被抢占的椅子上，将不会有什么好结果！
+    玩笑归玩笑，没有绑定的变量是一个没有任何值绑定的变量（就像我们的空椅子）。
+    绑定一个变量就是将一个值附加到变量上。
+    在Erlang中，如果你想给一个已经绑定的变量赋值，就会引起报错，<em>除非新的值和已经绑定的值相等</em>。
+    让我们想想一下右侧的蛇：如果别的蛇也加入进来，它也不太可能对游戏产生太多的影响。你只是看到了更多愤怒的蛇。
+    如果一个完全不同类型的动物坐在蛇的椅子上（例如说，蜜獾），事情将会变得糟糕了。
+    对于一个绑定的变量赋相同的值是没有问题的，但是如果赋不同的值，这就是个不怎么好的事情了。
+    如果你对这个概念还不是那么清晰，你可以回到前面关于<a class="chapter" href="starting-out-for-real.html#invariable-variables" title="Starting Out (for real)">不变的变量</a>
+    这个章节再次阅读。</p>
+
+<p>回到我们的代码中：当你调用<code>same(a,a)</code>时，第一个<var>X</var>被当作未绑定的：它自动绑定值<code>a</code>。
+    然后，当Erlang看到第二个参数的时候，它发现<var>X</var>已经被绑定了。Erlang决定用第二个参数<code>a</code>去进行比较，看它们是否相等。
+    模式匹配成功，然后函数返回<code>true</code>。如果两个值不相同的时候，这个函数分句将失败，Erlang将尝试第二个函数分句，
+    而第二个函数分句根本不关心传入的参数（当这是你最后的选择，你就别挑剔了！）直接返回false。你可以注意到该函数可以有效的处理任何类型的参数。
+    它可以适配任何类型的数据，不仅仅是列表和单变量。作为一个更复杂的例子，下面的函数将打印日期，不过前提是传入的日期的格式是正确的：
+</p>
+
+<pre class="brush:erl">
+valid_time({Date = {Y,M,D}, Time = {H,Min,S}}) -&gt;
+    io:format("The Date tuple (~p) says today is: ~p/~p/~p,~n",[Date,Y,M,D]),
+    io:format("The time tuple (~p) indicates: ~p:~p:~p.~n", [Time,H,Min,S]);
+valid_time(_) -&gt;
+    io:format("Stop feeding me wrong data!~n").
+</pre>
+
+<p>注意了嘛，它可以在函数声明中使用<code>=</code>操作符，这将准许我们同时匹配元组内的数据(<code>{Y,M,D}</code>)和整个元组(<var>Date</var>)。
+    该函数可以使用下面的方式进行测试：</p>
+
+<pre class="brush:eshell">
+4&gt; c(functions).
+{ok, functions}
+5&gt; functions:valid_time({{2011,09,06},{09,04,43}}).
+The Date tuple ({2011,9,6}) says today is: 2011/9/6,
+The time tuple ({9,4,43}) indicates: 9:4:43.
+ok
+6&gt; functions:valid_time({{2011,09,06},{09,04}}).
+Stop feeding me wrong data!
+ok
+</pre>
+
+<p>但这里面依然存在一个问题！这个函数可以接受任何类型，即便是文本和原子，只要保持元组是<code>{{A,B,C}, {D,E,F}}</code>这个格式。
+    这代表了模式匹配的一个局限性：
+    变量可以是精确的值如原子和已知数字，抽象的值如列表的head|tail，含有<var>N</var>个元素的元组，或其它值（<code>_</code>和未绑定的变量）等。
+    为了解决这个问题，我们将使用哨位。</p>
+
+
+<h3><a class="section" name="guards-guards">哨位，哨位！</a></h3>
+
+<img class="right" src="static/img/driving-age.png" width="199" height="160" alt="A baby driving a car" title="Baby on board // How I've adored // That sign on my car's windowpane... (&copy; The Simpsons)" />
+
+<p>
+    哨位是函数生命中可以让模式匹配更具表现力。
+    就像前面所提到的，模式匹配在匹配值的范围和类型上非常受限。
+    这导致我们不能表述计数性的概念：(A concept we couldn't represent is counting:)
+    和职业篮球选手打比赛，这个12岁的篮球玩家是不是矮了一点？用手掌走这么远是不是太远了？
+    你是否太老或者太年轻而不能开车？你无法使用简单的模式匹配回答这些问题。
+    我的意思是，你可以这样表述这个驾驶问题：
+</p>
+
+<pre class="brush:erl">
+old_enough(0) -&gt; false;
+old_enough(1) -&gt; false;
+old_enough(2) -&gt; false;
+...
+old_enough(14) -&gt; false;
+old_enough(15) -&gt; false;
+old_enough(_) -&gt; true.
+</pre>
+
+<p>
+    但是这是非常不切合实际的。
+    如果你想，你可以这么做，但是将来只有你一个人能维护你自己的代码。
+    如果你还想有朋友的话，编写一个新的
+    <code><a class="source" href="static/erlang/guards.erl" title="guards module">guards</a></code>
+    模块，这样可以让我们键入驾驶问题的“正确的”解决方案：</p>
+
+<pre class="brush:erl">
+old_enough(X) when X &gt;= 16 -&gt; true;
+old_enough(_) -&gt; false.
+</pre>
+
+<p>
+    是的，写完了！就像你看到的，这更简短和清晰。
+    注意，哨位表达式的基本规则是它们在成功的时候必须返回<code>true</code>。
+    如果哨位失败，将会返回<code>false</code>或抛出异常。
+    假设，我们现在禁止超过104岁的人驾驶汽车。
+    现在，我们合法的驾车年龄为16岁到104岁。
+    我们现在需要关心这件事情了，但是怎么做？让我们添加第二个哨位分句：</p>
+
+<pre class="brush:erl">
+right_age(X) when X &gt;= 16, X =&lt; 104 -&gt;
+    true;
+right_age(_) -&gt;
+    false.
+</pre>
+
+<p>逗号（<code>,</code>）扮演着<code>andalso</code>的角色而分号（<code>;</code>）扮演着<code>orelse</code>（可以参考"<a class="chapter local" href="starting-out-for-real.html#bool-and-compare">真正的开始</a>"这章）的角色。
+    两个哨位表达式都成功，整个哨位才会被判断为真。
+    我们也可以用相反的方式来写这个函数：</p>
+
+<pre class="brush:erl">
+wrong_age(X) when X &lt; 16; X &gt; 104 -&gt;
+    true;
+wrong_age(_) -&gt;
+    false.
+</pre>
+
+<img class="left" src="static/img/guard.png" width="135" height="230" alt="Guard" />
+
+<p>我们可以得到同样的结果。如果你想，你可以测试下这个（你应当每次都测试下！）。
+    在哨位表达式中，分号（<code>;</code>）和<code>orelse</code>操作符意义相同：
+    如果第一个哨位失败了，它将测试第二个，并且一直测试下去，直到某一个哨位返回了真或者所有哨位都失败了。
+</p>
+
+<p>
+    你不但可以使用比较和布尔计算,还可以使用数学操作符（<code>A*B/C &gt;= 0</code>）和类型函数，如<code>is_integer/1</code>, <code>is_atom/1</code>等。
+    （我们会尽快的在后面的章节中介绍这些）。但是哨位有一个缺点，因为用户定义的函数存在副作用，它不能使用用户定义的函数。
+    Erlang并不是一个纯函数式的语言（像 <a class="external" href="http://learnyouahaskell.com/" title="PURE! PURE! OH GOD SO PURELY FUNCTIONAL!">Haskell</a>这种）,
+    因为Erlang很大程度上依赖副作用：
+    你可以做I/O,在actor之间发送消息或在任何你想的时候丢出异常。
+    这里没有一个明确的方法可以判断你将在哨位中将使用的函数是否会打印文本或每次在测试过许多个函数分句后都捕获重要的错误。
+    因此，Erlang并不信任你（也许这是正确的方式！）</p>
+
+<p>话虽如此，当你遇到哨位表达式的时候，你已经具备了理解哨位基本语法的知识了。</p>
+
+<div class="note">
+    <p><strong>注意：</strong> 我在哨位表达式中将<code>,</code>和<code>;</code>比作<code>andalso</code>和<code>orelse</code>。
+        但是，它们不完全一样。 前面的那一对可以捕获异常，而后面的那一对却不会。
+        这代表着，如果哨位表达式<code>X &gt;= N; N &gt;= 0</code>的第一部分抛出异常，那么第二部分还是会被执行并且整个哨位也许会成功；
+        但是当哨位表达式<code>X &gt;= N orelse N &gt;= 0</code>的第一部分抛出异常，第二部分就会直接被跳过并在IE整个表达式就返回失败。
+    </p>
+
+    <p>但是（永远都会有一个‘意外’），只有<code>andalso</code>和<code>orelse</code>可以在哨位表达式中嵌套。
+        着代表者表达式<code>(A orelse B) andalso C</code>是合法的，而<code>(A; B), C</code>是不合法的。
+        对于不同场景我们因该区别对待，最好的策略是如果有必要就混合使用它们。
+    </p>
+
+</div>
+
+<h3><a class="section" name="what-the-if">关于If！？</a></h3>
+
+<p><code>If</code>和哨位很像并且使用哨位的语法，但是它在函数声明之外的部分使用。
+    实际上，<code>if</code>语句被成为<em>条件模式</em>。
+    Erlang的<code>if</code>语句和你在很多其它语言中遇到的<code>if</code>语句很不同；
+    将它们放在一起比较的话，它们是完全的不同的生物，如果使用不同的名字的话也会更容易被接受。
+    (compared to them they're weird creatures that might have been more accepted had they had a different name.)
+    当我进入Erlang的世界，你应当忘记以前所有关于<code>if</code>的知识。
+    请随意，因为接下来我们将去兜兜风。</p>
+
+<p>为了让你知道if表达式和哨位是多么的相似，让我们来看看下面的例子：</p>
+
+<pre class="brush:erl">
+-module(what_the_if).
+-export([heh_fine/0]).
+
+
+heh_fine() -&gt;
+    if 1 =:= 1 -&gt;
+        works
+    end,
+    if 1 =:= 2; 1 =:= 1 -&gt;
+        works
+    end,
+    if 1 =:= 2, 1 =:= 1 -&gt;
+        fails
+    end.
+</pre>
+
+<p>将这段代码保存为<code><a class="source" href="static/erlang/what_the_if.erl" title="what_the_if module">what_the_if.erl</a></code>并且让我试运行下：</p>
+
+<pre class="brush:eshell">
+1&gt; c(what_the_if).
+./what_the_if.erl:12: Warning: no clause will ever match
+./what_the_if.erl:12: Warning: the guard for this clause evaluates to 'false'
+{ok,what_the_if}
+2&gt; what_the_if:heh_fine().
+** exception error: no true branch found when evaluating an if expression
+     in function  what_the_if:heh_fine/0
+</pre>
+
+<img class="right" src="static/img/labyrinth.png" width="163" height="143" alt="Labyrinth with no exit" title="no exit branch possible! oh no!" />
+
+<p>啊哦！编译器警告我们，因为只有一个计算结果为<code>false</code>的条件分支，第12行的if语句永远都不会进行匹配。
+    请记住，在Erlang中所有的东西都需要返回值<code>if</code>表达式也不例外。
+    因此，当Erlang无法找到计算结果真的条件分支，它将崩溃：
+    它不会<em>不</em>返回值。因此，我们需要添加一个捕获所有且永远返回的分支。
+    在绝大部分语言中，这个将是‘else’。在Erlang中，我们将使用‘true’（这就解释了为什么VM会抛出"no true branch found"）：
+</p>
+
+<pre class="brush:erl">
+oh_god(N) -&gt;
+    if N =:= 2 -&gt; might_succeed;
+       true -&gt; always_does  %% this is Erlang's if's 'else!'
+    end.
+</pre>
+
+<p>并且现在，如果我们测试这个新的函数（老的函数依然会报警，忽略它或者把当们当作一个告诉你该如何做的提醒）：</p>
+
+<pre class="brush:eshell">
+3&gt; c(what_the_if).
+./what_the_if.erl:12: Warning: no clause will ever match
+./what_the_if.erl:12: Warning: the guard for this clause evaluates to 'false'
+{ok,what_the_if}
+4&gt; what_the_if:oh_god(2).
+might_succeed
+5&gt; what_the_if:oh_god(3).
+always_does
+</pre>
+
+<p>这还有另一个函数，它将告诉你如何<code>if</code>表达式中在使用多个条件。
+    同样这个函数也向你说明了为何让任何的表达式都返回值：
+    <var>Talk</var>将绑定<code>if</code>表达式的结果，并且在一个元组中做成一个字符串。
+    当你读这段代码的时候，你就会很容易发现为什么缺少<code>true</code>分支会将事情搞的一塌糊涂，
+    考虑到Erlang没有所谓的null值（如：lisp的nil，C的NULL，Python的None等）：</p>
+
+<pre class="brush:erl">
+%% note, this one would be better as a pattern match in function heads!
+%% I'm doing it this way for the sake of the example.
+help_me(Animal) -&gt;
+    Talk = if Animal == cat  -&gt; "meow";
+              Animal == beef -&gt; "mooo";
+              Animal == dog  -&gt; "bark";
+              Animal == tree -&gt; "bark";
+              true -&gt; "fgdadfgna"
+           end,
+    {Animal, "says " ++ Talk ++ "!"}.
+</pre>
+
+<p>让我们尝试下：</p>
+
+<pre class="brush:eshell">
+6&gt; c(what_the_if).
+./what_the_if.erl:12: Warning: no clause will ever match
+./what_the_if.erl:12: Warning: the guard for this clause evaluates to 'false'
+{ok,what_the_if}
+7&gt; what_the_if:help_me(dog).
+{dog,"says bark!"}
+8&gt; what_the_if:help_me("it hurts!").
+{"it hurts!","says fgdadfgna!"}
+</pre>
+
+<p>
+    你也许像其它很多Erlang程序员一样，想问为什么使用‘true’而不是‘else’做为控制流；
+    毕竟，你对它更熟悉。
+    Richard O'Keefe在Erlang邮件列表中给出了回答。
+    因为我没办法找到一个好地方展示它们，所以我直接引用了它们：</p>
+
+<blockquote title="From the Erlang mailing lists: http://erlang.org/pipermail/erlang-questions/2009-January/041228.html">
+	<p>
+        即便你对它更熟悉，但是这不代表‘else’是一个好的选择。
+        我知道通过使用’;&nbsp;true&nbsp;-&gt;‘，可以很容易在Erlang中得到‘else’，
+        但几十年的编程心理学研究结果表明，这是一个坏主意。我开始进行如下替换：
+        </p>
+	<pre>
+                          by
+	if X &gt; Y -&gt; a()		if X &gt; Y  -&gt; a()
+	 ; true  -&gt; b()		 ; X =&lt; Y -&gt; b()
+	end		     	end
+
+	if X &gt; Y -&gt; a()		if X &gt; Y -&gt; a()
+	 ; X &lt; Y -&gt; b()		 ; X &lt; Y -&gt; b()
+	 ; true  -&gt; c()		 ; X ==Y -&gt; c()
+	end			end
+	</pre>
+	<p>
+        虽然在书写的时候，让人感到很繁琐和烦躁，但对我们阅读代码的非常有帮助。
+    </p>
+</blockquote>
+
+<p>‘Else’或‘true’分之都应当“避免”：
+    <code>if</code>语句中比起最后依赖一个<em>“捕获所有”</em>明确给出所有逻辑判断是更容易阅读的。
+</p>
+
+<p>
+    就像前面所提到的，只能在哨位表达式中使用非常有限的函数（我们将在 <a class="chapter" href="types-or-lack-thereof.html#type-conversions" title="Type conversions">类型（或缺失的参考）</a>中介绍更多）。
+    Erlang条件表达式真正的力量才刚刚被唤出。
+    容我向你介绍：<code>case</code>语句</p>
+
+<div class="note">
+	<p><strong>注意：</strong>
+        当用同一个角度去看其它任何语言的<code>if</code>语法时，
+        所有<code>what_the_if.erl</code>中的函数让我看到的麻烦事情其实是和语法<code>if</code>语法结构没有任何关系的。
+        (All this horror expressed by the function names in <code>what_the_if.erl</code>
+        is expressed in regards to the <code>if</code> language construct
+        when seen from the perspective of any other languages' <code>if</code>.
+        在Erlang的语言环境中，它只是一个用错了名字但挺完美的逻辑结构。</p>
+</div>
+
+
+<h3><a class="section" name="in-case-of">In Case ... of</a></h3>
+
+<p>如果说<code>if</code>表达式像哨位，那么<code>case ... of</code>表达式就像整个函数头：
+    你可以使用非常复杂的模式匹配，同样你可以在上面使用哨位！</p>
+
+<p>
+    既然你已经对这些语法很熟悉了，我们就不需要大量的例子。
+    目前，我们将写一个向sets（一个只包含唯一值的集合）中添加数据的函数，这个sets我们将用一个无序集合来表示。
+    这个实现，也许在性能方面是非常差的，但是我们在这重点阐述语法：</p>
+
+<pre class="brush:erl">
+insert(X,[]) -&gt;
+    [X];
+insert(X,Set) -&gt;
+    case lists:member(X,Set) of
+        true  -&gt; Set;
+        false -&gt; [X|Set]
+    end.
+</pre>
+
+
+<p>
+    如果我们传入一个空set（列表）和一个<var>X</var>，这个函数将返回一个只包含<var>X</var>的列表。
+    否则将使用<code>lists:member/2</code>函数来判断X是否是列表的成员，如果是则返回真，如果不是则返回假。
+    在这个例子中，我们的set已经包含了<var>X</var>，所以我们不需要改动这个列表。否则，我们将<var>X</var>放到列表头上。
+    </p>
+
+
+<p>本例中，使用的是非常简单的模式匹配。
+    它可以更加的复杂（你可以将你的代码和<a class="source" href="static/erlang/cases.erl" title="cases.erl">我的</a>比较一下）：</p>
+
+<pre class="brush:erl">
+beach(Temperature) -&gt;
+    case Temperature of
+        {celsius, N} when N &gt;= 20, N =&lt; 45 -&gt;
+            'favorable';
+        {kelvin, N} when N &gt;= 293, N =&lt; 318 -&gt;
+            'scientifically favorable';
+        {fahrenheit, N} when N &gt;= 68, N =&lt; 113 -&gt;
+            'favorable in the US';
+        _ -&gt;
+            'avoid beach'
+    end.
+</pre>
+
+<p>这里，给出了使用3种不同温度计量单位下：摄氏，开式和华氏，"是否是适当的时间去海滩"的回答。
+    为了得到一个完善的回答，我们混合使用了模式匹配和哨位。
+    就像我们早先提过的那样，<code>case ... of</code>表达式非常像有一堆哨位的函数头。
+    实际上我们可以这样写我们的代码：</p>
+
+<pre class="brush:erl">
+beachf({celsius, N}) when N &gt;= 20, N =&lt; 45 -&gt;
+    'favorable';
+...
+beachf(_) -&gt;
+    'avoid beach'.
+</pre>
+
+<p>此时我们会产生一个问题：我们应该将<code>if</code>，<code>case ... of</code>和带有哨位的函数，分别用在什么样的场景中？</p>
+
+<img class="right" src="static/img/coppertone.png" width="164" height="258" alt="parody of the coppertone logo mixed with the squid on the tunnel page of this site" title="We are squids. At the beach." />
+
+<h3><a class="section" name="which-to-use">该用哪个？</a></h3>
+
+<p>该用哪个是一个非常难回答的问题。
+    因为在带哨位的函数和<code>case ... of</code>之间区别非常小：
+    事实上，它们在底层的实现上是一样的并且在性能上两者的效率是一样的。
+    两者中唯一的不同是，当有多于一个参数需要进行条件判断的时候：
+    <code>function(A,B)&nbsp;-&gt; ... end.</code>可以使用多个哨位同时处理<var>A</var> and <var>B</var>
+    但是case表达式就需要像下面这样进行格式化了：</p>
+
+<pre class="brush:erl">
+case {A,B} of
+    Pattern Guards -&gt; ...
+end.
+</pre>
+
+<p>
+    这种形式很少见，可能会让诸位读者惊讶一下。
+    在相似的场景中，使用函数也许更合适一些。
+    另一方面，我们早先写的<code>insert/2</code>函数按理说应当使用带哨位的函数，
+    但是该函数并不是简单的只返回一个<code>true</code>或<code>false</code>。
+</p>
+
+<p>
+    然后另一个问题，和<code>case</code>表达式和函数已经很灵活了，
+    甚至使用哨位都比<code>if</code>灵活，为什么我们还要用<code>if</code>？
+    使用<code>if</code>背后的原因非常简单：
+    它被作为当我们需要哨位，但是又不需要写出整个模式匹配的时候，一种简便方式加入语言中了。
+    (it was added to the language as a short way to have guards without needing to write the whole pattern matching part when it wasn't needed.)</p>
+
+<p>
+    当然，这一切更多的是个人的喜好和你经常遇到。
+    当然也没有一个非常好的固定的答案。这个话题在Erlang社区中一直存在，并且大家一直辩论。
+    只要你的选择容易理解，也没有人会因为你的选择而一定要击败你。
+    就像沃德·坎宁安曾经所说的<cite>“整洁的代码就是当你看一段子程序的时候，它比你想像的要好。“</cite>
+</p>
+
+				<ul class="navigation">
+											<li><a href="modules.html" title="Previous chapter">&lt; Previous</a></li>
+										
+					<li><a href="contents.html" title="Index">Index</a></li>
+					
+											<li><a href="types-or-lack-thereof.html" title="Next chapter">Next &gt;</a></li>
+									</ul>
+			</div><!-- content -->
+			<div id="footer">
+				<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/" title="Creative Commons License Details"><img src="static/img/cc.png" width="88" height="31" alt="Creative Commons Attribution Non-Commercial No Derivative License" /></a>
+				<p>Except where otherwise noted, content on this site is licensed under a Creative Commons Attribution Non-Commercial No Derivative License</p>
+			</div> <!-- footer -->
+		</div> <!-- wrapper -->
+		<div id="grass" />
+	<script type="text/javascript" src="static/js/shCore.js"></script>
+	<script type="text/javascript" src="static/js/shBrushErlang2.js%3F11"></script>
+	<script type="text/javascript">
+		SyntaxHighlighter.defaults.gutter = false;
+		SyntaxHighlighter.all();
+	</script>
+	</body>
+</html>
